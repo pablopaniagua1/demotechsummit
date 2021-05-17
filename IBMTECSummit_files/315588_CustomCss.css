@@ -1,0 +1,74 @@
+/*Hide date row on agenda*/
+.agenda-view .agenda-search-container .agenda-search .days-row{ 
+      display: none;
+}
+
+/*hide looking for your ticket*/
+.looking-ticket-link{
+display:none;
+}
+
+/*specific pages container*/
+.home-custom-css{}
+.community-custom-css{}
+.agenda-custom-css{}
+.speakers-custom-css{}
+
+/*main container of each section*/
+.main-app-container {}
+
+/*
+call-to-action buttons e.g:
+Register, Join The Community etc
+*/
+.btn-register {}
+
+/*Top navigation bar container*/
+.template-nav {}
+
+/*Top navigation bar items container*/
+#bs-example-navbar-collapse-1 {}
+
+/*social share buttons container*/
+.social-share-button {}
+
+/*social share buttons per social network*/
+.social-share-button.facebook {}
+.social-share-button.twitter {}
+.social-share-button.linkedin {}
+.social-share-button.google {}
+
+/*Hide Event Logo From Page*/
+.event-images-holder{display:none;}
+
+/*Navigation: no capital letter*/
+.nav-menu-btn.custom-color.color-5.color-1-border.color-5-hover.color-1-selected {
+ text-transform: initial;
+}
+
+/*Navigation Dropdown: no capital letter*/
+a.navigation-dropdown-li.custom-color.color-5.color-5-hover {
+ text-transform: initial;
+}
+
+/*Register button: no capital letters*/
+button.atom-main.btn.btn-success.btn-register.global-header-button.custom-font {
+ text-transform: initial;
+}
+
+/*Title speaker element: no capital letters*/
+h2.atom-main.custom-font {
+  text-transform: initial;
+}
+
+/*letter tracking: global template*/
+.global-template {
+    letter-spacing: 0.05em;
+}
+
+/*Page element: About the Event – Image in Circle*/
+.global-template .description .logo-holder {
+    border-radius: 0%;
+    background-size: 100%;
+}
+
