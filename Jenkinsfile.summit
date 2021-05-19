@@ -1,0 +1,91 @@
+
+def appName="demotechsummit"
+def branch="master"
+
+def url=""
+def promotePre
+def promotePro
+//def dockerfile="FROM wildfly\nCOPY ROOT.war /wildfly/standalone/deployments/ROOT.war\n CMD \$STI_SCRIPTS_PATH/run"
+node {
+stage("Initialize pipeline") {
+    project = "demotechsummit"
+}
+}
+
+node {
+stage("GIT Checkout") {
+    git url: "https://github.com/jboss-openshift/openshift-quickstarts.git", branch: "${branch}"
+}
+stage("Build WAR for deployment") {
+    sh "cd tomcat-jdbc"
+    sh "mvn clean package -Popenshift"
+    stash name:"war", includes:"target/ROOT.war"
+}    
+stage("Upload WAR file to Nexus")
+    {
+        sh "echo 'Uploading artifacts to nexus central repository...'"
+        sh "sleep 5"
+    }
+stage("Build Image for IBM Z") {
+    
+    
+    def devbuild = sh(returnStdout: true, script: "oc new-build --docker-image=openshift/openjdk-11-el7 --to=demotechsummit/is-${appName}:${branch}-${BUILD_NUMBER}' --name=bc-${appName}-${BUILD_NUMBER} -n ${project}")
+    unstash name:"war"
+    def status = sh(returnStdout: true, script: "oc start-build bc-${appName}-${BUILD_NUMBER} --from-file=target/ROOT.war -n ${project}")
+
+    def result = status.split("\n").find{ it.matches("^build.*started") }
+    
+    if(!result) {
+    echo "ERROR: No started build found for ${appName}"
+    currentBuild.result = 'FAILURE'
+    return
+    }
+    
+    // result can be:
+    // - build "build-name" started
+    // - build build.build.openshift.io/build-name started
+    // - build "build.build.openshift.io/build-name" started
+    // Goal is to isolate "build-name"
+    def startedBuild = result.replaceAll("build [^0-9a-zA-Z]*", "").replaceAll("[^0-9a-zA-Z]* started", "").replaceFirst("^.*/", "")
+    echo "Build ${startedBuild} has started. Now watching it ..."
+    
+    timeout(time: 20, unit: 'MINUTES') {
+    openshift.withCluster() {
+        openshift.withProject("defensa-development") {
+        def build = openshift.selector('builds', "${startedBuild}")
+        build.untilEach {
+            def object = it.object()
+            if(object.status.phase == "Failed") {
+            error("Build ${startedBuild} failed")
+            }
+            return object.status.phase == "Complete"
+        }
+        }
+    }  
+    }
+}
+stage("Deploy to Development") {
+    def devDeploy = sh(returnStdout: true, script: "oc new-app --name=${appName}-${BUILD_NUMBER} --image-stream=is-${appName}:${branch}-${BUILD_NUMBER} -n ${project}")
+    openshift.withCluster() {
+    openshift.withProject("defensa-development") {
+        def dc = openshift.selector('dc', "${appName}-${BUILD_NUMBER}")
+        dc.rollout().status()
+    }
+    }
+}
+
+
+stage("Test Deployment"){
+    openshift.withCluster() {
+        openshift.withProject("defensa-development") {
+        def svc = openshift.selector('svc', "${appName}-${BUILD_NUMBER}")
+        svc.expose()
+        def route= openshift.selector('route', "${appName}-${BUILD_NUMBER}")
+        url = "http://" + route.object().spec.host
+        }
+    }            
+    promotePre = input(message: "¿Es valida la imagen para preproduccion? Testea aquí: ${url}", ok: 'Si', 
+                parameters: [booleanParam(defaultValue: true, 
+                description: 'Si la imagen es valida pulse OK',name: 'Ok')])
+}
+}
